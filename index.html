@@ -1,81 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 body{margin:0;background:#111;color:white;font-family:sans-serif}
-#map{height:50vh;width:100%}
+#map{height:52vh;width:100%}
 .panel{padding:12px}
-.inputs{display:flex;gap:8px;margin-bottom:10px}
-.inputs div{flex:1;background:#1e1e1e;border:1px solid #333;border-radius:10px;padding:8px}
-.inputs label{font-size:10px;color:#aaa;display:block}
-.inputs input{width:100%;background:transparent;border:none;color:#c8ff00;font-size:18px;font-weight:900;outline:none}
-.card{background:#1e1e1e;border:2px solid #c8ff00;border-radius:15px;padding:15px;text-align:center;margin-top:10px}
-.oferta{font-size:36px;color:#c8ff00;font-weight:900}
+.inputs{display:flex;gap:8px}
+.box{flex:1;background:#222;border:1px solid #444;border-radius:10px;padding:8px}
+.box label{font-size:10px;color:#999}
+.box input{width:100%;background:none;border:none;color:#c8ff00;font-size:20px;font-weight:900;outline:none}
+.card{background:#1e1e1e;border:2px solid #c8ff00;border-radius:15px;padding:15px;text-align:center;margin-top:12px}
+.oferta{font-size:38px;color:#c8ff00;font-weight:900}
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div class="panel">
   <div class="inputs">
-    <div>
-      <label>TU GANANCIA x KM</label>
-      <input id="precioKm" type="number" step="0.05" placeholder="0.40" value="0.40">
-    </div>
-    <div>
-      <label>SALIDA BASE $</label>
-      <input id="base" type="number" step="0.25" placeholder="1.00" value="1.00">
-    </div>
+    <div class="box"><label>GANANCIA x KM</label><input id="precioKm" type="number" placeholder="0.40" value="0.40"></div>
+    <div class="box"><label>BASE $</label><input id="base" type="number" placeholder="1.00" value="1.00"></div>
   </div>
-  
-  <small style="color:#777">Toca el mapa: 1º Origen, 2º Destino</small>
-  <div class="card" id="resultado">
-    <span style="color:#aaa">Esperando ruta...</span>
-  </div>
+  <div class="card" id="resultado"><span style="color:#777">Toca el mapa para la burbuja</span></div>
 </div>
-
 <script>
-let map = L.map('map').setView([13.6929, -89.2182], 13);
+let map=L.map('map').setView([13.6929,-89.2182],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let origen=null,destino=null,m1=null,m2=null,linea=null;
 
-function calcularOfertaAuto(km){
-  let gananciaPorKm = parseFloat(document.getElementById('precioKm').value) || 0.40;
-  let salida = parseFloat(document.getElementById('base').value) || 1.00;
-  const gas = km * 0.18;
-  const desgaste = km * 0.07;
-  let base = gas + desgaste + (km * gananciaPorKm) + salida;
-  let h = new Date().getHours();
-  if(h>=21 || h<=5) base *= 1.20;
-  return base.toFixed(2);
+function ofertaAuto(km){
+  let g=parseFloat(document.getElementById('precioKm').value)||0;
+  let b=parseFloat(document.getElementById('base').value)||0;
+  return (km*0.25 + km*g + b + 0.70).toFixed(2);
 }
 
-map.on('click', function(e){
+map.on('click',function(e){
   if(!origen){
     origen=e.latlng;
     if(m1) map.removeLayer(m1);
-    m1=L.marker(origen).addTo(map).bindPopup("📍 ORIGEN").openPopup();
-    document.getElementById('resultado').innerHTML="Origen marcado, ahora toca el destino...";
+    m1=L.marker(origen).addTo(map).bindPopup("<b style='font-size:16px'>📍 ESTAS AQUI</b><br>Origen").openPopup();
+    document.getElementById('resultado').innerHTML="Origen con burbuja listo, ahora toca el destino...";
   } else if(!destino){
     destino=e.latlng;
     if(m2) map.removeLayer(m2);
-    m2=L.marker(destino).addTo(map).bindPopup("🏁 DESTINO").openPopup();
+    m2=L.marker(destino).addTo(map).bindPopup("<b style='font-size:16px'>🏁 DESTINO</b><br>Cliente").openPopup();
     if(linea) map.removeLayer(linea);
-    linea = L.polyline([origen,destino], {color:'#c8ff00'}).addTo(map);
-    let km = map.distance(origen,destino)/1000;
-    let oferta = calcularOfertaAuto(km);
-    document.getElementById('resultado').innerHTML=`<div style="color:#aaa;font-size:12px">${km.toFixed(2)} km</div><div class="oferta">OFERTA $${oferta}</div><div style="font-size:10px;color:#000;background:#c8ff00;display:inline-block;padding:2px 8px;border-radius:20px;margin-top:5px">AUTOMATICO</div>`;
+    linea=L.polyline([origen,destino],{color:'#c8ff00',weight:4}).addTo(map);
+    let km=map.distance(origen,destino)/1000;
+    let precio=ofertaAuto(km);
+    document.getElementById('resultado').innerHTML=`<div style="color:#aaa">${km.toFixed(2)} km</div><div class="oferta">OFERTA $${precio}</div><div style="background:#c8ff00;color:#000;display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;margin-top:5px">AUTOMATICO + BURBUJA ACTIVA</div>`;
   } else {
     map.removeLayer(m1); map.removeLayer(m2); if(linea) map.removeLayer(linea);
-    origen=e.latlng; destino=null; m1=L.marker(origen).addTo(map).bindPopup("📍 ORIGEN").openPopup();
-    document.getElementById('resultado').innerHTML="Origen marcado, ahora toca el destino...";
+    origen=e.latlng; destino=null;
+    m1=L.marker(origen).addTo(map).bindPopup("<b>📍 ESTAS AQUI</b>").openPopup();
+    document.getElementById('resultado').innerHTML="Reseteado, marca el destino otra vez...";
   }
 });
-
-// Recalcula si cambias el precio en las cajitas
-document.getElementById('precioKm').addEventListener('input', ()=>{ if(origen&&destino){ let km=map.distance(origen,destino)/1000; let oferta=calcularOfertaAuto(km); document.querySelector('.oferta').innerText=`OFERTA $${oferta}` } });
 </script>
 </body>
 </html>
